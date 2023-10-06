@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-//  represents a log entry with attributes.
+// represents a log entry with attributes.
 type LogEntry struct {
 	IP      string `json:"ip"`
 	City    string `json:"city"`
@@ -17,7 +17,7 @@ type LogEntry struct {
 	Browser string `json:"browser"`
 }
 
-//  represents a condition to be evaluated.
+// represents a condition to be evaluated.
 type Rule struct {
 	Attribute string `json:"attribute"` // attribute name (e.g., "ip")
 	Operator  string `json:"operator"`  // comparison operator (e.g., "==", "!=")
@@ -25,7 +25,7 @@ type Rule struct {
 	Value     string `json:"value"`     // expected value for the attribute
 }
 
-//  represents the computed attributes.
+// represents the computed attributes.
 type ComputedAttributes struct {
 	VPN            bool
 	RiskScore      int
@@ -34,7 +34,7 @@ type ComputedAttributes struct {
 	AuthFail       bool
 }
 
-//  evaluates a single rule against a log entry and returns true if the condition is met.
+// evaluates a single rule against a log entry and returns true if the condition is met.
 func EvaluateRule(entry LogEntry, rule Rule) bool {
 	switch rule.Attribute {
 	case "ip":
@@ -57,6 +57,7 @@ func EvaluateRule(entry LogEntry, rule Rule) bool {
 
 // evaluateStringAttribute evaluates a single string attribute rule.
 func evaluateStringAttribute(attributeValue, operator, expectedValue string) bool {
+	// fmt.Println("hello", attributeValue, operator, expectedValue)
 	switch operator {
 	case "==":
 		return attributeValue == expectedValue
@@ -68,12 +69,14 @@ func evaluateStringAttribute(attributeValue, operator, expectedValue string) boo
 	}
 }
 
-//  concurrently processes a stream of log entries using Goroutines.
+// concurrently processes a stream of log entries using Goroutines.
 func ProcessLogs(logs []LogEntry, rules []Rule) []ComputedAttributes {
+
 	var wg sync.WaitGroup
 	results := make([]ComputedAttributes, len(logs))
 
 	for i, entry := range logs {
+		// fmt.Println(rules)
 		wg.Add(1)
 		go func(index int, logEntry LogEntry) {
 			defer wg.Done()
@@ -85,8 +88,9 @@ func ProcessLogs(logs []LogEntry, rules []Rule) []ComputedAttributes {
 	return results
 }
 
-//  computes the specified attributes based on the log entry and rules.
+// computes the specified attributes based on the log entry and rules.
 func ComputeAttributes(entry LogEntry, rules []Rule) ComputedAttributes {
+	// fmt.Println(rules)
 	attributes := ComputedAttributes{}
 
 	// initializing logical operator flag
@@ -98,15 +102,17 @@ func ComputeAttributes(entry LogEntry, rules []Rule) ComputedAttributes {
 		if strings.ToUpper(rule.Logical) == "AND" {
 			useLogicalAnd = true
 			useLogicalOr = false
-			continue
+
 		} else if strings.ToUpper(rule.Logical) == "OR" {
+			// fmt.Println("hello")
 			useLogicalAnd = false
 			useLogicalOr = true
-			continue
+
 		}
 
 		// evaluating the rule based on the logical operator
 		ruleResult := EvaluateRule(entry, rule)
+		// fmt.Println("pop")
 
 		// applying the result to the attributes based on the logical operator
 		if useLogicalAnd {
@@ -115,7 +121,7 @@ func ComputeAttributes(entry LogEntry, rules []Rule) ComputedAttributes {
 			attributes.TrustedDevice = attributes.TrustedDevice && ruleResult
 			attributes.TrustedNetwork = attributes.TrustedNetwork && ruleResult
 			attributes.AuthFail = attributes.AuthFail && ruleResult
-		}  else if useLogicalOr {
+		} else if useLogicalOr {
 			attributes.VPN = attributes.VPN || ruleResult
 			attributes.RiskScore += 10 // increasing risk score for certain cities
 			attributes.TrustedDevice = attributes.TrustedDevice || ruleResult
@@ -133,7 +139,6 @@ func main() {
 		`{"ip": "192.168.100.13", "city": "Mumbai", "country": "India", "state": "Maharashtra", "device": "Desktop", "browser": "Safari"}`,
 		`{"ip": "192.168.100.14", "city": "Bangalore", "country": "India", "state": "Karnataka", "device": "Desktop", "browser": "Torr"}`,
 		`{"ip": "192.168.100.12", "city": "Kashi", "country": "India", "state": "UP", "device": "Desktop", "browser": "Mozilla Firefox"}`,
-		
 	}
 
 	// parsing log entry JSONs into a slice of LogEntry structs
@@ -149,9 +154,8 @@ func main() {
 
 	// sample rules to evaluate (multiple rules joined by "AND" or "OR")
 	rules := []Rule{
-		{Attribute: "ip", Operator: "==", Value: "192.168.100.18"},
-		{Operator: "OR"}, // Logical operator "OR" to combine rules
-		{Attribute: "city", Operator: "==", Value: "Meerut"},
+		{Attribute: "ip", Operator: "==", Value: "192.168.100.13", Logical: "OR"},
+		{Attribute: "city", Operator: "==", Value: "Bangalore", Logical: "OR"},
 	}
 
 	// processing the log entries concurrently and compute attributes
